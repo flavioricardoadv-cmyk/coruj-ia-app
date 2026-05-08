@@ -82,6 +82,13 @@ LEGAL_IMPORT_HINTS = {
 MP_LEGAL_OPINION_PROMPT = """
 Elabore, para cada arquivo, resumo em formato de parecer juridico do Ministerio Publico, observando rigorosamente as seguintes diretrizes:
 
+Regra de prioridade:
+- Nunca produzir resumo rapido, superficial ou meramente conclusivo quando houver autos/processos/documentos juridicos.
+- Priorizar seguranca da informacao, leitura minuciosa e fidelidade ao arquivo acima de velocidade ou concisao.
+- Se a analise demandar mais tempo, dividir o exame em etapas e registrar expressamente a fase analisada.
+- Nao presumir fatos, folhas, datas, pedidos, decisoes ou documentos. Na duvida, consignar a incerteza.
+- Se houver risco de omissao relevante, indicar que a conferencia deve prosseguir antes de qualquer conclusao.
+
 Forma e estilo:
 - Redacao em linguagem formal, tecnica e objetiva.
 - Utilizar paragrafos curtos, com espacamento entre eles.
@@ -1641,7 +1648,7 @@ async function loadMotorStatus() {
 }
 
 async function processMotorQueue() {
-  document.getElementById('motorStatus').innerHTML = '<div class="training-note">Processando ate 5 documentos da fila...</div>';
+  document.getElementById('motorStatus').innerHTML = '<div class="training-note">Processando com prioridade para seguranca e leitura minuciosa. Pode levar mais tempo.</div>';
   const res = await fetch('/motor/processar-agora', { method: 'POST' });
   const data = await res.json();
   document.getElementById('motorStatus').innerHTML = `<div class="training-note">${escapeHtml(data.mensagem || `Processados: ${data.processados || 0}`)}</div>`;
@@ -1997,6 +2004,7 @@ def _owl_mock_response(action: str, context: dict[str, object], selected_text: s
             "A resposta real devera indicar fls. sempre que o arquivo trouxer essa informacao.",
             "Na ausencia de dado nos autos, a resposta devera consignar: nao consta nos autos.",
             "Contradicoes, lacunas e insuficiencia de instrucao deverao ser destacadas sem inferencia externa.",
+            "Resumo rapido foi desativado para autos/processos: a prioridade e seguranca, completude e fidelidade.",
         ]
         draft = "\n\n".join([
             "1. Breve contextualizacao do documento",
@@ -2004,7 +2012,7 @@ def _owl_mock_response(action: str, context: dict[str, object], selected_text: s
             "2. Sintese do conteudo",
             preview,
             "3. Pontos relevantes/observacoes tecnicas",
-            "Nao consta nos autos, nesta resposta mockada, indicacao segura de folhas, contradicoes ou lacunas especificas.",
+            "Nao consta nos autos, nesta resposta mockada, indicacao segura de folhas, contradicoes ou lacunas especificas. A analise real devera ser minuciosa antes de qualquer conclusao.",
             "4. Trecho literal comprobatorio",
             '"Trecho literal sera extraido do arquivo quando a integracao real de IA estiver ativa."',
         ])
