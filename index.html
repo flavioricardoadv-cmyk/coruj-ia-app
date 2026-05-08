@@ -7,52 +7,120 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="app-shell">
-      <header class="topbar">
-        <div>
-          <h1>Coruj IA</h1>
-          <p>Assistente jurídico para análise de processos e manifestações do Ministério Público.</p>
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="topbar-brand">
+          <span class="topbar-icon">🦉</span>
+          <span class="topbar-title">Coruj IA</span>
+          <span class="topbar-sub">Assistente Jurídico do MP</span>
         </div>
-      </header>
+        <div class="topbar-actions">
+          <button class="btn-config" onclick="abrirConfig()" title="Configurações">
+            ⚙️ Configurar
+          </button>
+        </div>
+      </div>
+    </header>
 
-      <main class="main-layout">
-        <section class="input-panel card">
-          <label for="textoProcesso" class="section-title">Texto do processo, petição, decisão ou manifestação</label>
-          <textarea
-            id="textoProcesso"
-            placeholder="Cole aqui o conteúdo completo que deseja analisar..."
-          ></textarea>
+    <!-- SUBTOOLBAR: matérias -->
+    <nav class="subtoolbar">
+      <ul id="listaMaterias" class="materias-list"></ul>
+    </nav>
 
-          <div class="actions-grid">
-            <button data-action="resumo">Resumir processo</button>
-            <button data-action="ultima-peca">Identificar última peça</button>
-            <button data-action="modelo">Sugerir modelo de manifestação</button>
-            <button data-action="revisao">Revisar texto jurídico</button>
-            <button data-action="contradicoes">Apontar contradições</button>
+    <!-- MAIN -->
+    <div class="app-body">
+      <!-- Coluna esquerda: entrada -->
+      <section class="panel panel-input">
+        <div class="panel-header">
+          <span class="panel-title">Texto do processo / manifestação</span>
+          <span class="char-count" id="charCount">0 caracteres</span>
+        </div>
+        <textarea
+          id="textoProcesso"
+          placeholder="Cole aqui a petição, decisão ou movimentação processual que deseja analisar..."
+        ></textarea>
+
+        <div class="chips-row">
+          <button class="chip" data-action="resumo">📋 Resumir</button>
+          <button class="chip" data-action="ultima-peca">🔍 Última peça</button>
+          <button class="chip" data-action="modelo">📝 Sugerir modelo</button>
+          <button class="chip" data-action="revisao">✅ Revisar texto</button>
+          <button class="chip" data-action="contradicoes">⚡ Contradições</button>
+          <button class="chip" data-action="fundamentos">⚖️ Fundamentos</button>
+        </div>
+      </section>
+
+      <!-- Coluna direita: resultado -->
+      <aside class="panel panel-result">
+        <div class="panel-header">
+          <span class="panel-title">Resultado da análise</span>
+          <div class="result-tools">
+            <button class="btn-sm" onclick="copiarResultado()" title="Copiar">📋 Copiar</button>
+            <button class="btn-sm" onclick="baixarResultado()" title="Baixar .txt">⬇️ Baixar</button>
           </div>
-        </section>
-
-        <aside class="result-panel card">
-          <h2 class="section-title">Resultado da análise</h2>
-          <div id="resultado" class="result-content">
-            A resposta da Coruj IA aparecerá aqui.
+        </div>
+        <div id="resultado" class="result-content">
+          <div class="result-placeholder">
+            <span class="placeholder-icon">🦉</span>
+            <p>Selecione uma análise acima para começar.</p>
+            <p class="muted">A Coruj IA irá processar o texto usando inteligência artificial jurídica.</p>
           </div>
-        </aside>
-      </main>
+        </div>
+        <div id="loadingBar" class="loading-bar" hidden>
+          <div class="loading-fill"></div>
+        </div>
+      </aside>
     </div>
 
-    <button id="corujaBtn" class="coruja-btn" aria-label="Abrir assistente Coruj IA">
-      <span class="coruja-icon" aria-hidden="true">🦉</span>
-      <span class="coruja-text">Coruj IA</span>
+    <!-- MODAL CONFIG -->
+    <div id="modalConfig" class="modal-overlay" hidden>
+      <div class="modal-box">
+        <div class="modal-header">
+          <h2>⚙️ Configurações</h2>
+          <button class="modal-close" onclick="fecharConfig()">✕</button>
+        </div>
+        <div class="modal-body">
+          <label for="inputApiKey">Chave da API Anthropic (Claude)</label>
+          <input
+            type="password"
+            id="inputApiKey"
+            placeholder="sk-ant-..."
+            autocomplete="off"
+          />
+          <p class="modal-hint">
+            Obtenha sua chave em
+            <a href="https://console.anthropic.com/account/keys" target="_blank">console.anthropic.com</a>.
+            A chave é salva apenas no seu navegador (localStorage).
+          </p>
+
+          <label for="selectModelo">Modelo Claude</label>
+          <select id="selectModelo">
+            <option value="claude-haiku-4-5">claude-haiku-4-5 (rápido, econômico)</option>
+            <option value="claude-sonnet-4-5" selected>claude-sonnet-4-5 (recomendado)</option>
+            <option value="claude-opus-4-5">claude-opus-4-5 (máxima qualidade)</option>
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-primary" onclick="salvarConfig()">Salvar</button>
+          <button class="btn-ghost" onclick="fecharConfig()">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTÃO FLUTUANTE -->
+    <button id="corujaBtn" class="coruja-fab" onclick="toggleMenu()" aria-label="Coruj IA">
+      🦉
     </button>
 
     <div id="corujaMenu" class="coruja-menu" hidden>
-      <h3>Sugestões rápidas</h3>
+      <p class="coruja-menu-title">Acesso rápido</p>
       <ul>
-        <li><button class="menu-action" data-action="resumo">Gerar resumo objetivo</button></li>
-        <li><button class="menu-action" data-action="ultima-peca">Encontrar última movimentação</button></li>
-        <li><button class="menu-action" data-action="modelo">Sugerir minuta inicial</button></li>
-        <li><button class="menu-action" data-action="revisao">Revisar clareza e formalidade</button></li>
+        <li><button class="menu-item" data-action="resumo">📋 Gerar resumo objetivo</button></li>
+        <li><button class="menu-item" data-action="ultima-peca">🔍 Última movimentação</button></li>
+        <li><button class="menu-item" data-action="modelo">📝 Sugerir minuta inicial</button></li>
+        <li><button class="menu-item" data-action="revisao">✅ Revisar clareza e formalidade</button></li>
+        <li><button class="menu-item" data-action="fundamentos">⚖️ Identificar fundamentos</button></li>
       </ul>
     </div>
 
