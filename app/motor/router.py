@@ -44,7 +44,7 @@ router = APIRouter(prefix="/motor", tags=["motor-aprendizado"])
 
 def _extrair_texto_arquivo(conteudo: bytes, nome_arquivo: str) -> str:
     """
-    Extrai texto de um arquivo (PDF, DOCX, TXT, imagem).
+    Extrai texto de um arquivo (PDF, DOCX, TXT, XLS, imagem).
     Por padrÃ£o tenta pdfplumber e python-docx.
     Substitua por seu prÃ³prio extrator se necessÃ¡rio.
     """
@@ -78,8 +78,48 @@ def _extrair_texto_arquivo(conteudo: bytes, nome_arquivo: str) -> str:
         except Exception:
             pass
 
+    if ext in ("xls", "xlsx"):
+        text = _extrair_texto_planilha(conteudo, ext)
+        if text:
+            return text
+
     # Fallback: decodifica como texto
     return conteudo.decode("utf-8", errors="replace")
+
+
+def _extrair_texto_planilha(conteudo: bytes, ext: str) -> str:
+    """Converte planilhas exportadas pelo SAJ/Excel em linhas de texto treinaveis."""
+    try:
+        if ext == "xls":
+            import xlrd
+            book = xlrd.open_workbook(file_contents=conteudo)
+            rows: list[str] = []
+            for sheet in book.sheets():
+                rows.append(f"Aba: {sheet.name}")
+                for row_index in range(sheet.nrows):
+                    values = []
+                    for col_index in range(sheet.ncols):
+                        value = sheet.cell_value(row_index, col_index)
+                        if isinstance(value, float) and value.is_integer():
+                            value = int(value)
+                        values.append(str(value).strip())
+                    line = " | ".join(value for value in values if value)
+                    if line:
+                        rows.append(line)
+            return "\n".join(rows)
+
+        from openpyxl import load_workbook
+        workbook = load_workbook(io.BytesIO(conteudo), read_only=True, data_only=True)
+        rows = []
+        for sheet in workbook.worksheets:
+            rows.append(f"Aba: {sheet.title}")
+            for row in sheet.iter_rows(values_only=True):
+                line = " | ".join(str(value).strip() for value in row if value is not None and str(value).strip())
+                if line:
+                    rows.append(line)
+        return "\n".join(rows)
+    except Exception:
+        return ""
 
 
 def _extrair_texto_rtf(conteudo: bytes) -> str:
@@ -121,7 +161,7 @@ def _iterar_arquivos_zip(conteudo: bytes):
                     continue
                 name = info.filename
                 lower = name.lower()
-                if not lower.endswith((".rtf", ".txt", ".pdf", ".docx")):
+                if not lower.endswith((".rtf", ".txt", ".pdf", ".docx", ".xls", ".xlsx")):
                     continue
                 yield name, archive.read(info)
     except BadZipFile as exc:

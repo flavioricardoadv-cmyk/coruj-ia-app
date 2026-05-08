@@ -11,7 +11,7 @@ from app.motor.models import SessionLocal, init_db
 from app.motor.router import _criar_documento_motor
 
 
-SUPPORTED_EXTENSIONS = {".rtf", ".txt", ".pdf", ".docx"}
+SUPPORTED_EXTENSIONS = {".rtf", ".txt", ".pdf", ".docx", ".xls", ".xlsx"}
 ZIP_EXTENSIONS = {".zip"}
 DEFAULT_SOURCE = Path(r"C:\Users\flavi\OneDrive\Área de Trabalho\banco de manifestações")
 DEFAULT_REPORT = Path("modelo_db_export") / "motor_import_report.jsonl"
@@ -175,7 +175,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dry-run", action="store_true", help="Apenas simula e gera relatorio.")
     parser.add_argument("--limit", type=int, default=None, help="Limite de arquivos para teste.")
     parser.add_argument("--no-zips", action="store_true", help="Ignora arquivos ZIP.")
-    parser.add_argument("--extensions", default="rtf,docx,pdf", help="Extensoes treinaveis, separadas por virgula. Padrao: rtf,docx,pdf.")
+    parser.add_argument("--extensions", default="rtf,docx,pdf,xls,xlsx", help="Extensoes treinaveis, separadas por virgula. Padrao: rtf,docx,pdf,xls,xlsx.")
     parser.add_argument("--include-projects", action="store_true", help="Nao filtra nomes de projetos/README/requirements.")
     parser.add_argument("--report", default=str(DEFAULT_REPORT), help="Arquivo JSONL de relatorio.")
     args = parser.parse_args(argv)
