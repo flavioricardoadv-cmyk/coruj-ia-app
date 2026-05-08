@@ -1,0 +1,30 @@
+# Motor de Aprendizado — Dependências mínimas
+# Instale com: pip install -r requirements.txt
+
+# API e servidor
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
+# Banco de dados
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0      # PostgreSQL. Troque por: pymysql (MySQL) ou omita (SQLite)
+
+# IA (obrigatório)
+anthropic>=0.34.0
+
+# Scheduler (para processamento assíncrono)
+apscheduler>=3.10.0
+
+# Extração de texto (opcional — instale apenas o que precisar)
+pdfplumber>=0.11.0           # PDF com texto selecionável
+python-docx>=1.1.0           # Arquivos Word (.docx)
+# pytesseract>=0.3.13        # OCR para PDFs escaneados (requer Tesseract instalado)
+# pdf2image>=1.17.0          # Converter PDF em imagem para OCR
+# Pillow>=10.0.0             # Imagens
+
+# Busca semântica (opcional — funciona sem)
+# chromadb>=0.5.0            # Habilite com CHROMA_ATIVO=true no .env
+
+# Utilitários
+python-multipart>=0.0.9      # upload de arquivos no FastAPI
+python-dotenv>=1.0.0         # carrega .env

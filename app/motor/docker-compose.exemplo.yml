@@ -1,0 +1,52 @@
+version: "3.9"
+
+# Exemplo de deploy completo com PostgreSQL + motor de aprendizado
+# Copie para docker-compose.yml e ajuste as variáveis de ambiente.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER:     motor
+      POSTGRES_PASSWORD: motor123
+      POSTGRES_DB:       motordb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "motor"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ChromaDB (opcional — remova se não for usar busca semântica)
+  # chroma:
+  #   image: chromadb/chroma:latest
+  #   ports:
+  #     - "8001:8000"
+  #   volumes:
+  #     - chromadata:/chroma/chroma
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL:    postgresql://motor:motor123@postgres:5432/motordb
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}   # passe via .env
+      CONTEXTO_DOMINIO: "manifestações jurídicas do Ministério Público"
+      NOME_AUTOR:       "Promotor(a) de Justiça"
+      CHROMA_ATIVO:     "false"
+      # CHROMA_HOST:    chroma
+      # CHROMA_PORT:    "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - .:/app
+
+volumes:
+  pgdata:
+  # chromadata:

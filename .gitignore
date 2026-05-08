@@ -1,0 +1,19 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.log
+*.bak
+
+# Dados locais/sensiveis gerados pelo motor
+modelo_db_export/
+
+# Uploads, caches e arquivos temporarios
+uploads/
+tmp/
+temp/
+.env
+.env.*
