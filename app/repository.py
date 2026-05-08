@@ -33,7 +33,10 @@ def _learning_fingerprint(row: dict[str, Any]) -> str:
 
 
 def _database_url() -> str | None:
-    return os.environ.get("DATABASE_URL")
+    url = os.environ.get("DATABASE_URL")
+    if url and url.startswith("sqlite"):
+        return None
+    return url
 
 
 def using_database() -> bool:
