@@ -547,7 +547,7 @@ def home() -> str:
 <div class="saj-shell">
 <header class="saj-titlebar">
   <img src="/static/coruj_assets/coruj-analisar.png" alt="" />
-  <strong>Sistema de Automacao da Justica - Ministerio Publico</strong>
+  <strong>Codex Coruj IA - Sistema de Automacao da Justica - Ministerio Publico</strong>
   <div class="saj-clock"><span>Padrao II</span><span>Codex MP Assistente</span></div>
 </header>
 <nav class="saj-menubar">
