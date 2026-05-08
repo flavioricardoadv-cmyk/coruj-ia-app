@@ -15,5 +15,6 @@ modelo_db_export/
 uploads/
 tmp/
 temp/
+dist/
 .env
 .env.*
