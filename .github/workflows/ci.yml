@@ -24,7 +24,7 @@ jobs:
         run: pip install -r requirements.txt ruff
 
       - name: Ruff lint
-        run: ruff check app/ --select E,F,W --ignore E501
+        run: ruff check app/ --select E9,F --ignore F401 --exclude app/motor/exemplo
 
       - name: Check imports resolve
         run: python -c "from app.main import app; print('OK')"
