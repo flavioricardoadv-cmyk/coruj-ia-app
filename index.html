@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coruj IA | Assistente Jurídico</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>Coruj IA</h1>
+          <p>Assistente jurídico para análise de processos e manifestações do Ministério Público.</p>
+        </div>
+      </header>
+
+      <main class="main-layout">
+        <section class="input-panel card">
+          <label for="textoProcesso" class="section-title">Texto do processo, petição, decisão ou manifestação</label>
+          <textarea
+            id="textoProcesso"
+            placeholder="Cole aqui o conteúdo completo que deseja analisar..."
+          ></textarea>
+
+          <div class="actions-grid">
+            <button data-action="resumo">Resumir processo</button>
+            <button data-action="ultima-peca">Identificar última peça</button>
+            <button data-action="modelo">Sugerir modelo de manifestação</button>
+            <button data-action="revisao">Revisar texto jurídico</button>
+            <button data-action="contradicoes">Apontar contradições</button>
+          </div>
+        </section>
+
+        <aside class="result-panel card">
+          <h2 class="section-title">Resultado da análise</h2>
+          <div id="resultado" class="result-content">
+            A resposta da Coruj IA aparecerá aqui.
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <button id="corujaBtn" class="coruja-btn" aria-label="Abrir assistente Coruj IA">
+      <span class="coruja-icon" aria-hidden="true">🦉</span>
+      <span class="coruja-text">Coruj IA</span>
+    </button>
+
+    <div id="corujaMenu" class="coruja-menu" hidden>
+      <h3>Sugestões rápidas</h3>
+      <ul>
+        <li><button class="menu-action" data-action="resumo">Gerar resumo objetivo</button></li>
+        <li><button class="menu-action" data-action="ultima-peca">Encontrar última movimentação</button></li>
+        <li><button class="menu-action" data-action="modelo">Sugerir minuta inicial</button></li>
+        <li><button class="menu-action" data-action="revisao">Revisar clareza e formalidade</button></li>
+      </ul>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
