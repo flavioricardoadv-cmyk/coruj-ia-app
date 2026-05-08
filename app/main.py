@@ -74,6 +74,48 @@ LEGAL_IMPORT_HINTS = {
     "tutela",
 }
 
+MP_LEGAL_OPINION_PROMPT = """
+Elabore, para cada arquivo, resumo em formato de parecer juridico do Ministerio Publico, observando rigorosamente as seguintes diretrizes:
+
+Forma e estilo:
+- Redacao em linguagem formal, tecnica e objetiva.
+- Utilizar paragrafos curtos, com espacamento entre eles.
+- Empregar expressoes como "conforme consta nos autos" e "segundo se verifica", evitando assumir como verdade absoluta alegacoes das partes.
+
+Conteudo:
+- Sintetizar os principais fatos, pedidos, manifestacoes e decisoes, sem omitir elementos relevantes.
+- Indicar sempre que possivel as folhas correspondentes (fls.), no formato "fls. X" ou "fls. X-Y".
+- Destacar eventuais contradicoes, lacunas ou insuficiencia de instrucao.
+
+Fidelidade aos autos:
+- O resumo deve ser estritamente fiel ao conteudo do arquivo, sendo vedada qualquer inferencia ou complementacao externa.
+- Sempre que nao houver informacao, consignar expressamente: "nao consta nos autos".
+
+Prova de leitura obrigatoria:
+- Inserir ao menos 1 trecho literal relevante extraido do arquivo, entre aspas, como forma de demonstrar a efetiva leitura.
+- Garantir que o resumo reflita com precisao o conteudo do documento.
+
+Ordem de analise:
+- Analisar um arquivo por vez.
+- Seguir rigorosamente a ordem cronologica, conforme o intervalo de fls. indicado.
+- Iniciar pelo documento mais antigo.
+
+Estrutura obrigatoria:
+1. Breve contextualizacao do documento
+2. Sintese do conteudo
+3. Pontos relevantes/observacoes tecnicas
+4. Trecho literal comprobatorio
+""".strip()
+
+MP_OPINION_ACTIONS = {
+    "summarize_process",
+    "generate_report",
+    "generate_opinion",
+    "explain_decision",
+    "identify_pending",
+    "check_pages",
+}
+
 
 class RecommendRequest(BaseModel):
     case_text: str = Field(..., min_length=10)
@@ -1700,27 +1742,50 @@ def _owl_mock_response(action: str, context: dict[str, object], selected_text: s
     source = selected_text.strip() or str(context.get("text") or context.get("title") or "").strip()
     preview = source[:360] if source else "Nenhum trecho especifico foi enviado; usei o contexto disponivel na tela."
     process_ref = context.get("processCode") or context.get("modelCode") or "contexto atual"
+    uses_mp_prompt = action in MP_OPINION_ACTIONS
+
+    if uses_mp_prompt:
+        items = [
+            "Estrutura aplicada: contextualizacao, sintese, observacoes tecnicas e trecho literal comprobatorio.",
+            "A resposta real devera indicar fls. sempre que o arquivo trouxer essa informacao.",
+            "Na ausencia de dado nos autos, a resposta devera consignar: nao consta nos autos.",
+            "Contradicoes, lacunas e insuficiencia de instrucao deverao ser destacadas sem inferencia externa.",
+        ]
+        draft = "\n\n".join([
+            "1. Breve contextualizacao do documento",
+            "Conforme consta nos autos, a Coruj IA estruturara a leitura do arquivo em formato de parecer juridico do Ministerio Publico.",
+            "2. Sintese do conteudo",
+            preview,
+            "3. Pontos relevantes/observacoes tecnicas",
+            "Nao consta nos autos, nesta resposta mockada, indicacao segura de folhas, contradicoes ou lacunas especificas.",
+            "4. Trecho literal comprobatorio",
+            '"Trecho literal sera extraido do arquivo quando a integracao real de IA estiver ativa."',
+        ])
+    else:
+        items = [
+            "Contexto recebido e normalizado pelo frontend.",
+            "Pontos juridicos separados em achados, riscos e providencias.",
+            "Saida preparada para futura integracao com OpenAI Responses API.",
+        ]
+        draft = preview
 
     return {
         "title": title,
         "state": states.get(action, "teacher"),
-        "summary": f"Resposta mockada para {process_ref}. A estrutura ja esta pronta para substituir esta etapa por chamada real a IA.",
-        "items": [
-            "Contexto recebido e normalizado pelo frontend.",
-            "Pontos juridicos separados em achados, riscos e providencias.",
-            "Saida preparada para futura integracao com OpenAI Responses API.",
-        ],
-        "draft": preview,
+        "summary": f"Resposta mockada para {process_ref}. O prompt institucional do MP {'ja foi aplicado' if uses_mp_prompt else 'esta disponivel'} para futura chamada real a IA.",
+        "items": items,
+        "draft": draft,
         "nextSteps": [
             "Revisar os dados do processo antes de usar a sugestao.",
             "Conferir prazos, documentos essenciais e movimentacoes recentes.",
         ],
         "integrationReady": {
             "provider": "OpenAI Responses API",
+            "systemPrompt": MP_LEGAL_OPINION_PROMPT if uses_mp_prompt else "Voce e uma assistente juridica institucional.",
             "suggestedPayload": {
                 "model": "gpt-4.1-mini",
                 "input": [
-                    {"role": "system", "content": "Voce e uma assistente juridica institucional."},
+                    {"role": "system", "content": MP_LEGAL_OPINION_PROMPT if uses_mp_prompt else "Voce e uma assistente juridica institucional."},
                     {"role": "user", "content": {"action": action, "context": context, "selectedText": selected_text}},
                 ],
             },
