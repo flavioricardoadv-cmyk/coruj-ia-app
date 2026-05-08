@@ -13,6 +13,10 @@ Exemplos de domínios:
 import os
 import math
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # ── Banco de Dados ────────────────────────────────────────────────────────────
 DATABASE_URL = os.getenv(
     "DATABASE_URL",

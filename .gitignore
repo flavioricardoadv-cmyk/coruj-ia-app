@@ -18,3 +18,4 @@ temp/
 dist/
 .env
 .env.*
+!.env.example
