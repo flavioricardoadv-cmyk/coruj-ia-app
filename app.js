@@ -50,8 +50,7 @@ const LANDSCAPES = [
   { src: "public/assets/landscapes/landscape-fantasy-06.jpg", caption: "Vale de cristais" },
   { src: "public/assets/landscapes/landscape-fantasy-07.jpg", caption: "Aurora violeta" },
   { src: "public/assets/landscapes/landscape-fantasy-08.jpg", caption: "Cataratas celestes" },
-  { src: "public/assets/landscapes/landscape-fantasy-09.jpg", caption: "Lago lunar" },
-  { src: "public/assets/landscapes/landscape-fantasy-10.jpg", caption: "Costa boreal" }
+  { src: "public/assets/landscapes/landscape-fantasy-09.jpg", caption: "Lago lunar" }
 ];
 
 const OWL_STATES = {

@@ -333,7 +333,7 @@ def home() -> str:
       border: 1px solid #24324a;
       border-radius: 8px;
       overflow: hidden;
-      background: #0b1a2f center/cover no-repeat;
+      background: #0b1a2f center/contain no-repeat;
       box-shadow: 0 18px 42px rgba(0,0,0,.24);
       position: relative;
       transition: opacity .38s ease, filter .38s ease;
@@ -1004,8 +1004,7 @@ const PREVIEW_LANDSCAPES = [
   { src: '/assets/landscapes/landscape-fantasy-06.jpg', caption: 'Vale de cristais' },
   { src: '/assets/landscapes/landscape-fantasy-07.jpg', caption: 'Aurora violeta' },
   { src: '/assets/landscapes/landscape-fantasy-08.jpg', caption: 'Cataratas celestes' },
-  { src: '/assets/landscapes/landscape-fantasy-09.jpg', caption: 'Lago lunar' },
-  { src: '/assets/landscapes/landscape-fantasy-10.jpg', caption: 'Costa boreal' }
+  { src: '/assets/landscapes/landscape-fantasy-09.jpg', caption: 'Lago lunar' }
 ];
 let previewLandscapeIndex = 0;
 let previewLandscapeTimer = null;

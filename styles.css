@@ -288,7 +288,7 @@ input, textarea {
   border: 1px solid var(--line-soft);
   border-radius: 2px;
   overflow: hidden;
-  background: #0b1a2f center/cover no-repeat;
+  background: #0b1a2f center/contain no-repeat;
   box-shadow: 0 2px 8px rgba(0,0,0,.12);
   position: relative;
   transition: opacity .35s ease, filter .35s ease;
