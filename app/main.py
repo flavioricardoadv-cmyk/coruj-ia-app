@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+import re
+from datetime import datetime, timedelta, timezone
 from io import BytesIO
 from zipfile import BadZipFile, ZipFile
 
@@ -33,6 +34,10 @@ app = FastAPI(title="Codex Coruj IA - MVP", version="0.2.0")
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_ASSETS = ROOT / "public" / "assets"
 APP_STATIC = ROOT / "app" / "static"
+PROCESS_DOWNLOAD_DIR = Path(r"C:\Users\flavi\OneDrive\Área de Trabalho\processos_baixados")
+ROUTINE_STATE_FILE = PROCESS_DOWNLOAD_DIR / "_rotina_estado.json"
+ROUTINE_EXPORT_PATTERN = "*.xls*"
+PROCESS_NUMBER_RE = re.compile(r"\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}")
 
 if PUBLIC_ASSETS.exists():
     app.mount("/assets", StaticFiles(directory=str(PUBLIC_ASSETS)), name="assets")
@@ -184,6 +189,154 @@ def _extract_pdf_text(data: bytes) -> tuple[str, int]:
         if text:
             pages_text.append(f"--- Pagina {index} ---\n{text}")
     return "\n\n".join(pages_text).strip(), len(reader.pages)
+
+
+def _safe_relative(path: Path) -> str:
+    try:
+        return str(path.relative_to(PROCESS_DOWNLOAD_DIR))
+    except ValueError:
+        return path.name
+
+
+def _normalized_process(value: str) -> str:
+    return re.sub(r"\D", "", value)
+
+
+def _find_latest_workflow_export() -> Path | None:
+    if not PROCESS_DOWNLOAD_DIR.exists():
+        return None
+    files = [
+        path for path in PROCESS_DOWNLOAD_DIR.glob(ROUTINE_EXPORT_PATTERN)
+        if path.is_file() and "fila" in path.name.lower()
+    ]
+    if not files:
+        files = [path for path in PROCESS_DOWNLOAD_DIR.glob(ROUTINE_EXPORT_PATTERN) if path.is_file()]
+    return max(files, key=lambda path: path.stat().st_mtime) if files else None
+
+
+def _parse_workflow_export(path: Path) -> list[dict[str, str]]:
+    try:
+        import xlrd
+    except Exception:
+        return []
+
+    rows: list[dict[str, str]] = []
+    current_date = ""
+    book = xlrd.open_workbook(str(path))
+    for sheet in book.sheets():
+        for row_index in range(sheet.nrows):
+            values = [str(sheet.cell_value(row_index, col)).strip() for col in range(sheet.ncols)]
+            first_text = next((value for value in values if value), "")
+            date_match = re.search(r"Entrada\s*:\s*(\d{2}/\d{2}/\d{4})", first_text)
+            if date_match:
+                current_date = date_match.group(1)
+                continue
+
+            process_number = next((value for value in values if PROCESS_NUMBER_RE.fullmatch(value)), "")
+            if not process_number:
+                continue
+
+            rows.append({
+                "numero": process_number,
+                "dataEntrada": current_date,
+                "observacao": values[3] if len(values) > 3 else "",
+                "classe": values[5] if len(values) > 5 else "",
+                "parte": values[6] if len(values) > 6 else "",
+                "alocadoPara": values[7] if len(values) > 7 else "",
+            })
+    return rows
+
+
+def _list_downloaded_process_pdfs() -> dict[str, Path]:
+    downloaded: dict[str, Path] = {}
+    if not PROCESS_DOWNLOAD_DIR.exists():
+        return downloaded
+    for path in PROCESS_DOWNLOAD_DIR.rglob("*.pdf"):
+        match = PROCESS_NUMBER_RE.search(path.name)
+        if match:
+            downloaded[_normalized_process(match.group(0))] = path
+    return downloaded
+
+
+def _routine_status() -> dict[str, object]:
+    now = datetime.now()
+    export_path = _find_latest_workflow_export()
+    downloaded = _list_downloaded_process_pdfs()
+    queue_rows: list[dict[str, str]] = []
+    export_age_minutes: int | None = None
+    export_is_fresh = False
+
+    if export_path:
+        export_time = datetime.fromtimestamp(export_path.stat().st_mtime)
+        export_age_minutes = max(0, int((now - export_time).total_seconds() // 60))
+        export_is_fresh = now - export_time <= timedelta(hours=1)
+        queue_rows = _parse_workflow_export(export_path)
+
+    missing = [
+        row for row in queue_rows
+        if _normalized_process(row["numero"]) not in downloaded
+    ]
+    loaded = [
+        row for row in queue_rows
+        if _normalized_process(row["numero"]) in downloaded
+    ]
+
+    if not export_path:
+        phase = "Aguardando exportacao da fila"
+        next_action = "Faca a exportacao da fila de trabalho e salve em processos_baixados."
+    elif not export_is_fresh:
+        phase = "Exportacao vencida"
+        next_action = "A exportacao tem mais de 1 hora. Faca uma nova exportacao da fila antes de baixar processos."
+    elif missing:
+        phase = f"Aguardando download de {len(missing)} processo(s)"
+        next_action = "Baixe os processos listados abaixo. Quando terminar, clique em Arquivos carregados, analisar."
+    else:
+        phase = "Arquivos carregados"
+        next_action = "Todos os processos da exportacao atual parecem ter PDF baixado. Clique em Arquivos carregados, analisar."
+
+    state = {
+        "downloadDir": str(PROCESS_DOWNLOAD_DIR),
+        "exportacao": {
+            "ok": bool(export_path),
+            "fresh": export_is_fresh,
+            "arquivo": _safe_relative(export_path) if export_path else "",
+            "atualizadaEm": datetime.fromtimestamp(export_path.stat().st_mtime).strftime("%d/%m/%Y %H:%M") if export_path else "",
+            "idadeMinutos": export_age_minutes,
+            "mensagem": (
+                "Exportacao atualizada ha menos de 1 hora."
+                if export_path and export_is_fresh else
+                "Exportacao ausente ou vencida."
+            ),
+        },
+        "fila": {
+            "ok": bool(queue_rows),
+            "total": len(queue_rows),
+            "baixados": len(loaded),
+            "pendentes": len(missing),
+        },
+        "downloads": {
+            "ok": bool(queue_rows) and not missing,
+            "pdfsDetectados": len(downloaded),
+        },
+        "processosParaBaixar": missing[:30],
+        "processosBaixados": loaded[:30],
+        "faseAtual": phase,
+        "proximaAcao": next_action,
+        "fases": [
+            {"nome": "1. Conferir exportacao", "ok": bool(export_path) and export_is_fresh},
+            {"nome": "2. Identificar fila", "ok": bool(queue_rows)},
+            {"nome": "3. Baixar processos", "ok": bool(queue_rows) and not missing},
+            {"nome": "4. Confirmar arquivos carregados", "ok": False},
+            {"nome": "5. Analisar/importar", "ok": False},
+        ],
+        "atualizadoEm": now.strftime("%d/%m/%Y %H:%M:%S"),
+    }
+    return state
+
+
+def _save_routine_state(state: dict[str, object]) -> None:
+    PROCESS_DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    ROUTINE_STATE_FILE.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def _message_text(message: dict[str, object]) -> str:
@@ -419,6 +572,19 @@ def home() -> str:
     .motor-status-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
     .motor-status-card { background: #0d2038; border: 1px solid #273a59; border-radius: 6px; padding: 8px; }
     .motor-status-card b { display: block; color: #e7edf7; font-size: 16px; }
+    .routine-panel { margin-top: 12px; border: 1px solid #274c75; background: #0b2038; border-radius: 8px; padding: 12px; }
+    .routine-header { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+    .routine-title { color: #f6a21a; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+    .routine-phase { color: #e7edf7; font-size: 14px; font-weight: 700; margin-top: 4px; }
+    .routine-next { color: #c8dcff; font-size: 13px; margin-top: 8px; line-height: 1.35; }
+    .routine-steps { display: grid; gap: 6px; margin: 10px 0; }
+    .routine-step { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid #1d3655; border-radius: 6px; padding: 7px 9px; background: #0d2038; font-size: 12px; }
+    .routine-step.ok { border-color: rgba(65,156,89,.55); background: rgba(65,156,89,.12); }
+    .routine-badge { color: #dfefff; background: #1e3354; border-radius: 999px; padding: 2px 7px; font-size: 11px; white-space: nowrap; }
+    .routine-list { margin-top: 8px; max-height: 210px; overflow: auto; border-top: 1px solid #1d3655; padding-top: 8px; }
+    .routine-process { display: grid; grid-template-columns: 170px 1fr; gap: 8px; padding: 5px 0; border-bottom: 1px solid #142842; font-size: 12px; }
+    .routine-process b { color: #dfefff; }
+    .routine-process span { color: #adc4e6; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .placeholder-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 10px 0; }
     .field { margin-top: 10px; }
     .field label { display: block; margin-bottom: 5px; }
@@ -548,6 +714,15 @@ def home() -> str:
     .saj-shell .title { color: #111; font-size: 12px; line-height: 16px; font-weight: 400; }
     .saj-shell .meta { color: #526579; }
     .saj-shell .detail-card, .saj-shell .result, .saj-shell .feedback-panel, .saj-shell .training-panel, .saj-shell .use-panel, .saj-shell .training-note, .saj-shell .auto-note { background: #fff; border: 1px solid #c4d2e1; color: #102033; border-radius: 3px; }
+    .saj-shell .routine-panel { background: #fff; border: 1px solid #c4d2e1; color: #102033; border-radius: 3px; }
+    .saj-shell .routine-title, .saj-shell .routine-phase { color: #064f7d; }
+    .saj-shell .routine-next, .saj-shell .routine-process span { color: #394a5d; }
+    .saj-shell .routine-step { background: #f5f9fd; border-color: #c8d8e8; }
+    .saj-shell .routine-step.ok { background: #edf8ef; border-color: #99c79e; }
+    .saj-shell .routine-badge { background: #e2edf7; color: #123a60; }
+    .saj-shell .routine-list { border-top-color: #d9e3ee; }
+    .saj-shell .routine-process { border-bottom-color: #d9e3ee; }
+    .saj-shell .routine-process b { color: #102033; }
     .saj-shell .detail-label, .saj-shell .field label { color: #003f6b; }
     .saj-shell .chip { background: #eaf3ff; border-color: #a8c1dc; color: #003f6b; }
     .saj-shell pre { background: #fff; color: #111; border: 1px solid #c7c7c7; border-radius: 2px; box-shadow: 0 2px 8px rgba(0,0,0,.10); font-family: Garamond, "Times New Roman", serif; font-size: 17px; line-height: 1.65; max-height: 520px; padding: 42px 58px; width: min(760px, calc(100% - 30px)); margin: 12px auto; box-sizing: border-box; }
@@ -670,10 +845,27 @@ def home() -> str:
     <div class="auto-note" id="autoNote"></div>
     <div class="feedback-panel" id="feedbackPanel"></div>
     <div class="training-panel" id="trainingPanel">
+      <h2>Rotina da fila</h2>
+      <div class="routine-panel" id="routinePanel">
+        <div class="routine-header">
+          <div>
+            <div class="routine-title">Conferencia diaria</div>
+            <div class="routine-phase" id="routinePhase">Verificando exportacao...</div>
+          </div>
+          <span class="routine-badge" id="routineUpdated">--</span>
+        </div>
+        <div class="routine-next" id="routineNext">A Coruj IA confere a ultima exportacao, identifica a fila e orienta os proximos downloads.</div>
+        <div class="routine-steps" id="routineSteps"></div>
+        <div class="training-actions">
+          <button type="button" onclick="loadRoutineStatus()">Atualizar rotina</button>
+          <button class="secondary" type="button" onclick="confirmRoutineFilesLoaded()">Arquivos carregados, analisar</button>
+        </div>
+        <div id="routineDetails" class="routine-list"></div>
+      </div>
       <h2>Motor de aprendizado</h2>
       <label class="pdf-drop" id="motorDrop">
-        <input id="motorInput" type="file" accept=".rtf,.zip,.pdf,.docx,.txt,application/rtf,application/zip,application/x-zip-compressed,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" />
-        <b>Corpus juridico</b>: envie RTF, ZIP, PDF, DOCX ou TXT para o motor aprender padroes.
+        <input id="motorInput" type="file" accept=".rtf,.zip,.pdf,.docx,.txt,.xls,.xlsx,application/rtf,application/zip,application/x-zip-compressed,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+        <b>Corpus juridico</b>: envie RTF, ZIP, PDF, DOCX, TXT, XLS ou XLSX para o motor aprender padroes.
       </label>
       <div class="training-actions">
         <button onclick="loadMotorStatus()">Status do motor</button>
@@ -1352,8 +1544,8 @@ async function uploadChatHistory(file) {
 async function uploadMotorFile(file) {
   if (!file) return;
   const lower = file.name.toLowerCase();
-  if (!lower.endsWith('.rtf') && !lower.endsWith('.zip') && !lower.endsWith('.pdf') && !lower.endsWith('.docx') && !lower.endsWith('.txt')) {
-    document.getElementById('motorStatus').innerHTML = '<div class="training-note">Envie RTF, ZIP, PDF, DOCX ou TXT para o motor de aprendizado.</div>';
+  if (!lower.endsWith('.rtf') && !lower.endsWith('.zip') && !lower.endsWith('.pdf') && !lower.endsWith('.docx') && !lower.endsWith('.txt') && !lower.endsWith('.xls') && !lower.endsWith('.xlsx')) {
+    document.getElementById('motorStatus').innerHTML = '<div class="training-note">Envie RTF, ZIP, PDF, DOCX, TXT, XLS ou XLSX para o motor de aprendizado.</div>';
     return;
   }
   document.getElementById('motorStatus').innerHTML = `<div class="training-note">Enviando ${escapeHtml(file.name)} para o motor...</div>`;
@@ -1370,6 +1562,60 @@ async function uploadMotorFile(file) {
     ? `${data.documentos || 0} documento(s) enfileirado(s), ${data.duplicatas || 0} duplicata(s), ${data.ignorados || 0} ignorado(s).`
     : `Documento ${data.documento_id || ''} | Categoria ${escapeHtml(data.categoria || 'AUTO')}`;
   document.getElementById('motorStatus').innerHTML = `<div class="training-note"><b>${escapeHtml(data.status)}</b>: ${escapeHtml(data.mensagem || 'Documento recebido pelo motor.')}<br>${detail}</div>`;
+  await loadMotorStatus();
+}
+
+function renderRoutine(routine) {
+  document.getElementById('routinePhase').textContent = routine.faseAtual || 'Rotina aguardando verificacao';
+  document.getElementById('routineNext').textContent = routine.proximaAcao || '';
+  document.getElementById('routineUpdated').textContent = routine.atualizadoEm || '--';
+  document.getElementById('routineSteps').innerHTML = (routine.fases || []).map(step =>
+    `<div class="routine-step ${step.ok ? 'ok' : ''}">
+      <span>${escapeHtml(step.nome)}</span>
+      <span class="routine-badge">${step.ok ? 'cumprida' : 'pendente'}</span>
+    </div>`
+  ).join('');
+
+  const exportInfo = routine.exportacao || {};
+  const fila = routine.fila || {};
+  const downloads = routine.downloads || {};
+  const pending = routine.processosParaBaixar || [];
+  const pendingRows = pending.map(item =>
+    `<div class="routine-process"><b>${escapeHtml(item.numero || '')}</b><span>${escapeHtml(item.classe || 'Classe nao informada')} | ${escapeHtml(item.dataEntrada || 'sem data')}</span></div>`
+  ).join('');
+  const emptyPending = '<div class="training-note">Nenhum processo pendente de download foi identificado na exportacao atual.</div>';
+  document.getElementById('routineDetails').innerHTML = `
+    <div class="routine-process"><b>Exportacao</b><span>${escapeHtml(exportInfo.arquivo || 'nao encontrada')} ${exportInfo.idadeMinutos != null ? `| ${exportInfo.idadeMinutos} min` : ''}</span></div>
+    <div class="routine-process"><b>Fila</b><span>${fila.total || 0} processo(s) | ${fila.baixados || 0} PDF(s) localizado(s) | ${fila.pendentes || 0} pendente(s)</span></div>
+    <div class="routine-process"><b>Pasta monitorada</b><span>${escapeHtml(routine.downloadDir || '')}</span></div>
+    <div class="routine-process"><b>PDFs detectados</b><span>${downloads.pdfsDetectados || 0}</span></div>
+    ${pending.length ? `<div class="training-note">Processos para baixar agora (${fila.pendentes || pending.length}). Mostrando ate 30:</div>${pendingRows}` : emptyPending}`;
+}
+
+async function loadRoutineStatus() {
+  const panel = document.getElementById('routinePanel');
+  if (panel) document.getElementById('routinePhase').textContent = 'Conferindo rotina...';
+  const res = await fetch('/api/rotina-fila/status');
+  const data = await res.json();
+  if (!res.ok || !data.ok) {
+    document.getElementById('routineNext').textContent = 'Nao foi possivel conferir a rotina da fila.';
+    return;
+  }
+  renderRoutine(data.routine);
+}
+
+async function confirmRoutineFilesLoaded() {
+  document.getElementById('routinePhase').textContent = 'Conferindo arquivos carregados...';
+  document.getElementById('routineNext').textContent = 'A Coruj IA vai comparar os PDFs na pasta, importar o que estiver novo e atualizar a fase.';
+  const res = await fetch('/api/rotina-fila/arquivos-carregados', { method: 'POST' });
+  const data = await res.json();
+  if (!res.ok || !data.ok) {
+    document.getElementById('routineNext').textContent = 'Nao foi possivel analisar os arquivos carregados.';
+    return;
+  }
+  renderRoutine(data.depois);
+  const stats = data.importacao || {};
+  document.getElementById('motorStatus').innerHTML = `<div class="training-note">Importacao da rotina: ${stats.enfileirado || 0} novo(s), ${stats.duplicata || 0} duplicata(s), ${stats.erro || 0} erro(s).</div>`;
   await loadMotorStatus();
 }
 
@@ -1460,6 +1706,7 @@ async function toggleTraining() {
     document.getElementById('trainingText').value = source;
   }
   if (panel.style.display === 'block') {
+    await loadRoutineStatus();
     await loadMotorStatus();
   }
 }
@@ -1796,6 +2043,53 @@ def _owl_mock_response(action: str, context: dict[str, object], selected_text: s
 @app.post("/api/owl-assistant")
 def owl_assistant(payload: OwlAssistantRequest) -> dict[str, object]:
     return {"ok": True, "response": _owl_mock_response(payload.action, payload.context, payload.selectedText)}
+
+
+@app.get("/api/rotina-fila/status")
+def rotina_fila_status() -> dict[str, object]:
+    state = _routine_status()
+    _save_routine_state(state)
+    return {"ok": True, "routine": state}
+
+
+@app.post("/api/rotina-fila/arquivos-carregados")
+def rotina_fila_arquivos_carregados() -> dict[str, object]:
+    from app.motor.importar_pasta import import_folder
+
+    state_before = _routine_status()
+    export_info = state_before.get("exportacao", {})
+    if not isinstance(export_info, dict) or not export_info.get("fresh"):
+        state_before["faseAtual"] = "Exportacao vencida"
+        state_before["proximaAcao"] = "Faca uma nova exportacao da fila antes de confirmar arquivos carregados."
+        _save_routine_state(state_before)
+        return {
+            "ok": True,
+            "antes": state_before,
+            "depois": state_before,
+            "importacao": {"status": "ignorada", "motivo": "exportacao vencida"},
+        }
+
+    stats = import_folder(
+        root=PROCESS_DOWNLOAD_DIR,
+        categoria="Processos baixados",
+        dry_run=False,
+        limit=None,
+        include_zips=False,
+        extensions={".pdf"},
+        exclude_projects=True,
+        report_path=ROOT / "modelo_db_export" / "motor_import_processos_baixados.jsonl",
+    )
+    state_after = _routine_status()
+    phases = state_after.get("fases", [])
+    if isinstance(phases, list):
+        for phase in phases:
+            if isinstance(phase, dict) and phase.get("nome") in {"4. Confirmar arquivos carregados", "5. Analisar/importar"}:
+                phase["ok"] = True
+    state_after["faseAtual"] = "Arquivos conferidos e importacao executada"
+    state_after["proximaAcao"] = "Revise os processos ainda pendentes ou processe a fila do motor quando a chave de IA estiver ativa."
+    state_after["ultimaImportacao"] = stats
+    _save_routine_state(state_after)
+    return {"ok": True, "antes": state_before, "depois": state_after, "importacao": stats}
 
 
 @app.get("/health")
