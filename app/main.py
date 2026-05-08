@@ -29,7 +29,7 @@ from app.motor.models import init_db as init_motor_db
 from app.motor.router import router as motor_router
 
 
-app = FastAPI(title="MP Assistente - MVP", version="0.2.0")
+app = FastAPI(title="Codex Coruj IA - MVP", version="0.2.0")
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_ASSETS = ROOT / "public" / "assets"
 APP_STATIC = ROOT / "app" / "static"
@@ -293,7 +293,7 @@ def home() -> str:
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Coruj IA - Sistema Juridico</title>
+  <title>Codex Coruj IA - Sistema Juridico</title>
   <style>
     :root { color-scheme: dark; font-family: Garamond, "EB Garamond", "Adobe Garamond Pro", Georgia, serif; }
     body { margin: 0; background: #07111f; color: #e7edf7; }
@@ -548,7 +548,7 @@ def home() -> str:
 <header class="saj-titlebar">
   <img src="/static/coruj_assets/coruj-analisar.png" alt="" />
   <strong>Sistema de Automacao da Justica - Ministerio Publico</strong>
-  <div class="saj-clock"><span>Padrao II</span><span>MP Assistente</span></div>
+  <div class="saj-clock"><span>Padrao II</span><span>Codex MP Assistente</span></div>
 </header>
 <nav class="saj-menubar">
   <span>Cadastro</span>
@@ -739,7 +739,7 @@ const OwlAssistant = (() => {
   }
 
   function imageTag(extra = '') {
-    return `<img data-owl-image ${extra} src="${imageFor(state)}" data-fallback="${fallbackImages[state] || fallbackImages.idle}" alt="Coruj IA" onerror="this.onerror=null; this.src=this.dataset.fallback;" />`;
+    return `<img data-owl-image ${extra} src="${imageFor(state)}" data-fallback="${fallbackImages[state] || fallbackImages.idle}" alt="Codex Coruj IA" onerror="this.onerror=null; this.src=this.dataset.fallback;" />`;
   }
 
   function renderActions(targetId) {
@@ -752,7 +752,7 @@ const OwlAssistant = (() => {
   }
 
   function renderMenus() {
-    const menuBody = `<div class="owl-menu-title"><b>Coruj IA</b><span>Assistente juridica contextual</span></div>
+    const menuBody = `<div class="owl-menu-title"><b>Codex Coruj IA</b><span>Assistente juridica contextual</span></div>
       <div class="owl-action-grid">
         <button class="owl-action" type="button" data-owl-point="true">
           <span class="owl-action-mark">+</span>
@@ -940,7 +940,7 @@ const OwlAssistant = (() => {
   }
 
   function bindEvents() {
-    document.getElementById('owlAssistantRoot').innerHTML = `<button class="owl-button" type="button" aria-label="Abrir Coruj IA" title="Coruj IA">${imageTag()}</button>`;
+    document.getElementById('owlAssistantRoot').innerHTML = `<button class="owl-button" type="button" aria-label="Abrir Codex Coruj IA" title="Codex Coruj IA">${imageTag()}</button>`;
     document.querySelector('.owl-button').addEventListener('click', toggleMenu);
     document.addEventListener('contextmenu', showContextMenu);
     document.addEventListener('click', event => {

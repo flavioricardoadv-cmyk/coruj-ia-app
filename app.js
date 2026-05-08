@@ -233,7 +233,7 @@ function runOwlAction(action, state) {
     explain: "Explicacao juridica",
     next: "Proximo ato sugerido"
   };
-  document.getElementById("owlPanelTitle").textContent = titles[action] || "Coruj IA";
+  document.getElementById("owlPanelTitle").textContent = titles[action] || "Codex Coruj IA";
   document.getElementById("owlPanelBody").innerHTML = `
     <div class="owl-section">
       <div class="owl-section-label">Contexto</div>

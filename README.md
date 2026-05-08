@@ -1,4 +1,4 @@
-# MP Assistente - MVP
+# Codex Coruj IA - MVP
 
 MVP local para listar modelos de manifestações e recomendar o modelo mais adequado a partir do texto de um caso.
 
