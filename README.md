@@ -1,14 +1,51 @@
-# Coruj IA
+# MP Assistente - MVP
 
-Primeira versão funcional (MVP) de um app jurídico para apoiar análise de processos e manifestações do Ministério Público.
+MVP local para listar modelos de manifestações e recomendar o modelo mais adequado a partir do texto de um caso.
 
-## Estrutura
+## Rodar localmente
 
-- `index.html`: estrutura da interface, botões de ação e painel de resultados.
-- `styles.css`: visual moderno, limpo e responsivo.
-- `app.js`: regras de interação da interface e funções iniciais de análise textual.
-- `assets/`: pasta preparada para receber imagens PNG da Coruj IA.
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
 
-## Como executar
+Abra:
 
-Abra o arquivo `index.html` no navegador.
+```txt
+http://127.0.0.1:8000
+```
+
+## Usar PostgreSQL
+
+Se quiser usar o banco `mp_assistente` em vez do JSON local:
+
+```powershell
+$env:DATABASE_URL = "postgresql://postgres:SUA_SENHA@localhost:5432/mp_assistente"
+uvicorn app.main:app --reload --port 8000
+```
+
+Sem `DATABASE_URL`, o app usa automaticamente:
+
+```txt
+modelo_db_export/modelos_manifestacoes.json
+```
+
+## Rotas
+
+```txt
+GET  /health
+GET  /modelos
+GET  /modelos/{codigo}
+POST /recomendar
+```
+
+Exemplo de `POST /recomendar`:
+
+```json
+{
+  "case_text": "Foi juntado laudo social em ação de guarda e alimentos. As partes ainda não foram intimadas para alegações finais.",
+  "limit": 3
+}
+```

@@ -1,0 +1,31 @@
+{
+  "name": "Coruj IA",
+  "description": "Pacote inicial de assets da mascote Coruj IA para uso no app juridico.",
+  "assets": [
+    {
+      "id": "prazos",
+      "file": "coruj-prazos.png",
+      "usage": "prazos, calendario, acompanhamento"
+    },
+    {
+      "id": "analisar",
+      "file": "coruj-analisar.png",
+      "usage": "analise de documento, busca e recomendacao"
+    },
+    {
+      "id": "inconsistencia",
+      "file": "coruj-inconsistencia.png",
+      "usage": "alertas, inconsistencias e revisao"
+    },
+    {
+      "id": "minuta",
+      "file": "coruj-minuta.png",
+      "usage": "minutas, texto final e preenchimento"
+    },
+    {
+      "id": "explicar",
+      "file": "coruj-explicar.png",
+      "usage": "explicacao juridica, ajuda e orientacao"
+    }
+  ]
+}
