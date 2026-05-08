@@ -42,10 +42,16 @@ const MODELS = [
 ];
 
 const LANDSCAPES = [
-  { src: "public/assets/landscapes/landscape-lake-dawn.jpg", caption: "Amanhecer tranquilo" },
-  { src: "public/assets/landscapes/landscape-forest-valley.jpg", caption: "Vale verde" },
-  { src: "public/assets/landscapes/landscape-coast-sunset.jpg", caption: "Litoral ao entardecer" },
-  { src: "public/assets/landscapes/landscape-highland-night.jpg", caption: "Serra silenciosa" }
+  { src: "public/assets/landscapes/landscape-fantasy-01.jpg", caption: "Ilhas suspensas" },
+  { src: "public/assets/landscapes/landscape-fantasy-02.jpg", caption: "Prado nas nuvens" },
+  { src: "public/assets/landscapes/landscape-fantasy-03.jpg", caption: "Bosque encantado" },
+  { src: "public/assets/landscapes/landscape-fantasy-04.jpg", caption: "Deserto ao poente" },
+  { src: "public/assets/landscapes/landscape-fantasy-05.jpg", caption: "Arvore luminosa" },
+  { src: "public/assets/landscapes/landscape-fantasy-06.jpg", caption: "Vale de cristais" },
+  { src: "public/assets/landscapes/landscape-fantasy-07.jpg", caption: "Aurora violeta" },
+  { src: "public/assets/landscapes/landscape-fantasy-08.jpg", caption: "Cataratas celestes" },
+  { src: "public/assets/landscapes/landscape-fantasy-09.jpg", caption: "Lago lunar" },
+  { src: "public/assets/landscapes/landscape-fantasy-10.jpg", caption: "Costa boreal" }
 ];
 
 const OWL_STATES = {

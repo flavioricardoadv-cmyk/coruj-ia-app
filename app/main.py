@@ -996,10 +996,16 @@ function currentMode() {
 }
 
 const PREVIEW_LANDSCAPES = [
-  { src: '/assets/landscapes/landscape-lake-dawn.jpg', caption: 'Amanhecer tranquilo' },
-  { src: '/assets/landscapes/landscape-forest-valley.jpg', caption: 'Vale verde' },
-  { src: '/assets/landscapes/landscape-coast-sunset.jpg', caption: 'Litoral ao entardecer' },
-  { src: '/assets/landscapes/landscape-highland-night.jpg', caption: 'Serra silenciosa' }
+  { src: '/assets/landscapes/landscape-fantasy-01.jpg', caption: 'Ilhas suspensas' },
+  { src: '/assets/landscapes/landscape-fantasy-02.jpg', caption: 'Prado nas nuvens' },
+  { src: '/assets/landscapes/landscape-fantasy-03.jpg', caption: 'Bosque encantado' },
+  { src: '/assets/landscapes/landscape-fantasy-04.jpg', caption: 'Deserto ao poente' },
+  { src: '/assets/landscapes/landscape-fantasy-05.jpg', caption: 'Arvore luminosa' },
+  { src: '/assets/landscapes/landscape-fantasy-06.jpg', caption: 'Vale de cristais' },
+  { src: '/assets/landscapes/landscape-fantasy-07.jpg', caption: 'Aurora violeta' },
+  { src: '/assets/landscapes/landscape-fantasy-08.jpg', caption: 'Cataratas celestes' },
+  { src: '/assets/landscapes/landscape-fantasy-09.jpg', caption: 'Lago lunar' },
+  { src: '/assets/landscapes/landscape-fantasy-10.jpg', caption: 'Costa boreal' }
 ];
 let previewLandscapeIndex = 0;
 let previewLandscapeTimer = null;
