@@ -1994,9 +1994,30 @@ def _owl_mock_response(action: str, context: dict[str, object], selected_text: s
     }
     title = labels.get(action, "Analise da Coruj IA")
     source = selected_text.strip() or str(context.get("text") or context.get("title") or "").strip()
-    preview = source[:360] if source else "Nenhum trecho especifico foi enviado; usei o contexto disponivel na tela."
+    preview = source[:900] if source else "Nao consta nos autos texto especifico para analise."
     process_ref = context.get("processCode") or context.get("modelCode") or "contexto atual"
     uses_mp_prompt = action in MP_OPINION_ACTIONS
+    page_refs = sorted(set(re.findall(r"fls?\.?\s*\d+(?:\s*[-–]\s*\d+)?", source, flags=re.IGNORECASE)))
+    literal_quote = ""
+    if source:
+        if len(source) <= 320:
+            literal_quote = source
+        fls_match = re.search(r".{0,80}fls?\.?\s*\d+(?:\s*[-–]\s*\d+)?.{0,120}", source, flags=re.IGNORECASE)
+        if fls_match and not literal_quote:
+            literal_quote = fls_match.group(0).strip()
+        sentences = re.split(r"(?<=[.!?])\s+", source)
+        candidate = next((item.strip() for item in sentences if "fls" in item.lower()), "")
+        literal_quote = literal_quote or candidate or source[:220].strip()
+    page_note = ", ".join(page_refs[:8]) if page_refs else "nao consta nos autos indicacao expressa de folhas."
+    lacunas = []
+    lower_source = source.lower()
+    if "nao consta" in lower_source:
+        lacunas.append("Ha informacao expressa de ausencia documental ou dado nao localizado nos autos.")
+    if any(term in lower_source for term in ["sem assinatura", "ilegivel", "não assinado", "nao assinado"]):
+        lacunas.append("Ha possivel insuficiencia de comprovacao formal, a ser conferida no documento original.")
+    if not page_refs:
+        lacunas.append("Nao foram identificadas referencias seguras de folhas no trecho recebido.")
+    lacuna_note = " ".join(lacunas) if lacunas else "Nao consta nos autos, no trecho recebido, contradicao ou lacuna especifica identificavel sem leitura integral."
 
     if uses_mp_prompt:
         items = [
@@ -2008,13 +2029,13 @@ def _owl_mock_response(action: str, context: dict[str, object], selected_text: s
         ]
         draft = "\n\n".join([
             "1. Breve contextualizacao do documento",
-            "Conforme consta nos autos, a Coruj IA estruturara a leitura do arquivo em formato de parecer juridico do Ministerio Publico.",
+            f"Conforme consta nos autos, a presente analise preliminar foi estruturada a partir do trecho encaminhado para {title.lower()}. Referencia: {process_ref}.",
             "2. Sintese do conteudo",
             preview,
             "3. Pontos relevantes/observacoes tecnicas",
-            "Nao consta nos autos, nesta resposta mockada, indicacao segura de folhas, contradicoes ou lacunas especificas. A analise real devera ser minuciosa antes de qualquer conclusao.",
+            f"Referencias de folhas identificadas: {page_note}\n\n{lacuna_note}\n\nEsta entrega ainda e mockada e deve ser tratada como teste de formato. A analise real devera conferir o arquivo integral, um documento por vez, em ordem cronologica.",
             "4. Trecho literal comprobatorio",
-            '"Trecho literal sera extraido do arquivo quando a integracao real de IA estiver ativa."',
+            f"\"{literal_quote or 'nao consta nos autos trecho literal suficiente para citacao.'}\"",
         ])
     else:
         items = [
@@ -2027,7 +2048,7 @@ def _owl_mock_response(action: str, context: dict[str, object], selected_text: s
     return {
         "title": title,
         "state": states.get(action, "teacher"),
-        "summary": f"Resposta mockada para {process_ref}. O prompt institucional do MP {'ja foi aplicado' if uses_mp_prompt else 'esta disponivel'} para futura chamada real a IA.",
+        "summary": f"Resposta de teste para {process_ref}. O prompt institucional do MP {'foi aplicado ao formato da entrega' if uses_mp_prompt else 'esta disponivel'} para futura chamada real a IA.",
         "items": items,
         "draft": draft,
         "nextSteps": [
